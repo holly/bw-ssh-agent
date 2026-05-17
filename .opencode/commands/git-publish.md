@@ -52,10 +52,38 @@ git commit -m "<type>: <説明>"
 - `test:` テストの追加・修正
 - `chore:` ビルドプロセスや補助ツールの変更
 
-### 5. リモートにプッシュ
+### 5. バージョン整合性確認（push 前必須）
 
 ```bash
-git push origin $(git rev-parse --abbrev-ref HEAD)
+PYPROJECT_VERSION=$(grep '^version' pyproject.toml | sed 's/.*= *"\(.*\)".*/\1/')
+SCRIPT_VERSION=$(grep '^VERSION = ' bw-ssh-agent.py | sed 's/.*"\(.*\)".*/\1/')
+
+if [ "$PYPROJECT_VERSION" != "$SCRIPT_VERSION" ]; then
+    echo "❌ バージョン不一致: push を中止します" >&2
+    echo "   pyproject.toml : $PYPROJECT_VERSION" >&2
+    echo "   bw-ssh-agent.py: $SCRIPT_VERSION" >&2
+    echo "   両者を一致させてから再度 /git-publish を実行してください。" >&2
+    exit 1
+fi
+```
+
+### 6. タグ自動判定＆付与
+
+```bash
+LATEST_TAG=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -1)
+
+if [ -z "$LATEST_TAG" ] || \
+   ([ "$PYPROJECT_VERSION" != "$LATEST_TAG" ] && \
+    [ "$(printf '%s\n%s\n' "$LATEST_TAG" "$PYPROJECT_VERSION" | sort -V | tail -1)" = "$PYPROJECT_VERSION" ]); then
+    git tag -a "v$PYPROJECT_VERSION" -m "Release v$PYPROJECT_VERSION"
+    echo "🏷️ タグ v$PYPROJECT_VERSION を作成しました"
+fi
+```
+
+### 7. リモートにプッシュ
+
+```bash
+git push origin $(git rev-parse --abbrev-ref HEAD) --follow-tags
 ```
 
 現在のブランチ名を自動判定してプッシュする。
