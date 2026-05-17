@@ -33,7 +33,7 @@ parser.add_argument(
     version=f"%(prog)s {VERSION}",
     help="show version",
 )
-args = parser.parse_args()
+args = None
 
 
 def _execute_command(cmds: list[str], stdin: str = None) -> tuple[int, str, str]:
@@ -130,16 +130,18 @@ def start_ssh_agent() -> int:
     return int(os.environ["SSH_AGENT_PID"])
 
 
-def print_env_exports(agent_pid: int) -> None:
+def print_env_exports(agent_pid: int, shell_type: str) -> None:
     for k in SSH_AGENT_ENVIRON_KEYS:
-        if args.shell_type in ("bash", "zsh"):
+        if shell_type in ("bash", "zsh"):
             print(f"export {k}={os.environ.get(k)}")
-        elif args.shell_type == "fish":
+        elif shell_type == "fish":
             print(f"set -x {k} {os.environ.get(k)}")
     print(f"Agent pid {agent_pid}", file=sys.stderr)
 
 
 def main() -> None:
+    global args
+    args = parser.parse_args()
     agent_pid: int | None = None
     agent_started = False
 
@@ -184,7 +186,7 @@ def main() -> None:
         print(e, file=sys.stderr)
         sys.exit(1)
 
-    print_env_exports(agent_pid)
+    print_env_exports(agent_pid, args.shell_type)
 
 
 if __name__ == "__main__":
