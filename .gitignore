@@ -91,3 +91,9 @@ desktop.ini
 *.log
 *.tmp
 *.bak
+
+# ===========================
+# opencode
+# ===========================
+.opencode/node_modules
+
